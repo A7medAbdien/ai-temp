@@ -1,7 +1,7 @@
 import {
   customProvider,
-  // extractReasoningMiddleware,
-  // wrapLanguageModel,
+  extractReasoningMiddleware,
+  wrapLanguageModel,
 } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import {
@@ -25,10 +25,10 @@ export const myProvider = isTestEnvironment
       languageModels: {
         'chat-model': openai('gpt-3.5-turbo'),
         // 'chat-model-4o': openai('gpt-4o'),
-        // 'chat-model-reasoning': wrapLanguageModel({
-        //   model: openai('o1-preview'),
-        //   middleware: extractReasoningMiddleware({ tagName: 'think' }),
-        // }),
+        'chat-model-reasoning': wrapLanguageModel({
+          model: openai('gpt-3.5-turbo'),
+          middleware: extractReasoningMiddleware({ tagName: 'think' }),
+        }),
         'title-model': openai('gpt-3.5-turbo'),
         // 'artifact-model': openai('gpt-4o'),
       },
