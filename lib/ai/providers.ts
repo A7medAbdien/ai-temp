@@ -29,7 +29,7 @@ export const myProvider = isTestEnvironment
         //   model: openai('o1-preview'),
         //   middleware: extractReasoningMiddleware({ tagName: 'think' }),
         // }),
-        // 'title-model': openai('gpt-4o-mini'),
+        'title-model': openai('gpt-3.5-turbo'),
         // 'artifact-model': openai('gpt-4o'),
       },
       // imageModels: {
