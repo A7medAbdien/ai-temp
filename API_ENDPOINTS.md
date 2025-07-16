@@ -34,6 +34,50 @@ All endpoints return standardized error responses with the following structure:
 
 ---
 
+## API Endpoints Overview
+
+| Method                 | Endpoint                                  | Purpose                           | Auth Required | Rate Limited |
+| ---------------------- | ----------------------------------------- | --------------------------------- | ------------- | ------------ |
+| **Authentication**     |
+| `GET`                  | `/api/auth/guest`                         | Create guest user session         | ❌            | ❌           |
+| `GET`                  | `/api/auth/signin`                        | Show sign-in page                 | ❌            | ❌           |
+| `POST`                 | `/api/auth/signin/{provider}`             | Sign in with auth method          | ❌            | ❌           |
+| `GET/POST`             | `/api/auth/signout`                       | Sign out user                     | ❌            | ❌           |
+| `GET`                  | `/api/auth/session`                       | Get current session               | ❌            | ❌           |
+| `GET`                  | `/api/auth/csrf`                          | Get CSRF token                    | ❌            | ❌           |
+| `GET`                  | `/api/auth/providers`                     | Get available auth methods        | ❌            | ❌           |
+| **Chat Management**    |
+| `POST`                 | `/api/chat`                               | Send message & stream AI response | ✅            | ✅           |
+| `DELETE`               | `/api/chat?id={chatId}`                   | Delete chat and messages          | ✅            | ❌           |
+| `GET`                  | `/api/chat/[id]/stream`                   | Resume interrupted chat stream    | ✅            | ❌           |
+| **Document/Artifacts** |
+| `GET`                  | `/api/document?id={docId}`                | Get document versions             | ✅            | ❌           |
+| `POST`                 | `/api/document?id={docId}`                | Create/update document            | ✅            | ❌           |
+| `DELETE`               | `/api/document?id={docId}&timestamp={ts}` | Delete document versions          | ✅            | ❌           |
+| **File Management**    |
+| `POST`                 | `/api/files/upload`                       | Upload images (5MB max)           | ✅            | ❌           |
+| **Chat History**       |
+| `GET`                  | `/api/history`                            | Get paginated chat history        | ✅            | ❌           |
+| **Message Voting**     |
+| `GET`                  | `/api/vote?chatId={chatId}`               | Get message votes                 | ✅            | ❌           |
+| `PATCH`                | `/api/vote`                               | Vote on message (up/down)         | ✅            | ❌           |
+| **AI Suggestions**     |
+| `GET`                  | `/api/suggestions?documentId={docId}`     | Get document suggestions          | ✅            | ❌           |
+| **Utility**            |
+| `GET`                  | `/ping`                                   | Health check endpoint             | ❌            | ❌           |
+
+### Key Features:
+
+- **🔐 Authentication**: Session-based with guest user support
+- **📱 Mobile-Ready**: JSON API with standard HTTP methods
+- **🔄 Real-time**: Server-Sent Events (SSE) for streaming responses
+- **📁 File Upload**: Image upload with validation (JPEG/PNG, 5MB max)
+- **⚡ Rate Limiting**: Daily message limits per user type
+- **🔄 Resumable Streams**: Handle network interruptions
+- **📖 Pagination**: Chat history with cursor-based pagination
+
+---
+
 ## Authentication Endpoints
 
 ### Guest Authentication
@@ -55,9 +99,137 @@ Creates and signs in a guest user automatically.
 
 ### NextAuth Endpoints
 
-**GET/POST** `/api/auth/[...nextauth]`
+Standard NextAuth.js authentication endpoints for comprehensive auth management.
 
-Standard NextAuth.js authentication endpoints for login/logout/session management.
+#### Sign In Page
+
+**GET** `/api/auth/signin`
+
+Displays the sign-in page with available authentication providers.
+
+**Response:**
+
+- **Success**: HTML sign-in page
+- **Redirect**: May redirect if already authenticated
+
+---
+
+#### Sign In with Authentication Method
+
+**POST** `/api/auth/signin/{provider}`
+
+Authenticates user with specific authentication method.
+
+**Path Parameters:**
+
+- `provider`: Authentication method - either `credentials` (for email/password login) or `guest` (for anonymous access)
+
+**Note**: "Provider" here refers to the authentication method, not external OAuth providers like Google/GitHub.
+
+**Request Body (for credentials provider):**
+
+```json
+{
+  "email": "user@example.com",
+  "password": "userpassword",
+  "csrfToken": "csrf-token-value"
+}
+```
+
+**Response:**
+
+- **Success**: Redirects to callback URL or home page
+- **Error**: Returns to sign-in page with error
+
+---
+
+#### Sign Out
+
+**GET/POST** `/api/auth/signout`
+
+Signs out the current user and invalidates the session.
+
+**Response:**
+
+- **GET**: Shows sign-out confirmation page
+- **POST**: Performs sign-out and redirects
+
+---
+
+#### Get Session
+
+**GET** `/api/auth/session`
+
+Retrieves the current user session information.
+
+**Response:**
+
+```json
+{
+  "user": {
+    "id": "user-id",
+    "email": "user@example.com",
+    "type": "regular|guest"
+  },
+  "expires": "2024-12-31T23:59:59.999Z"
+}
+```
+
+**Response (not authenticated):**
+
+```json
+null
+```
+
+---
+
+#### Get CSRF Token
+
+**GET** `/api/auth/csrf`
+
+Returns CSRF token for secure form submissions.
+
+**Response:**
+
+```json
+{
+  "csrfToken": "csrf-token-value"
+}
+```
+
+---
+
+#### Get Available Authentication Methods
+
+**GET** `/api/auth/providers`
+
+Returns list of configured authentication methods available in the application.
+
+**Response:**
+
+```json
+{
+  "credentials": {
+    "id": "credentials",
+    "name": "Credentials",
+    "type": "credentials",
+    "signinUrl": "/api/auth/signin/credentials",
+    "callbackUrl": "/api/auth/callback/credentials"
+  },
+  "guest": {
+    "id": "guest",
+    "name": "Guest",
+    "type": "credentials",
+    "signinUrl": "/api/auth/signin/guest",
+    "callbackUrl": "/api/auth/callback/guest"
+  }
+}
+```
+
+**Available Authentication Methods:**
+
+- **`credentials`**: Email/password authentication for registered users
+- **`guest`**: Anonymous authentication for temporary access (no registration required)
 
 ---
 
@@ -469,10 +641,23 @@ Rate limits are enforced per user and reset every 24 hours.
 
 ## Authentication Flow
 
+The application supports two authentication methods:
+
+### 1. **Guest Authentication** (Anonymous Access)
+
 1. **Unauthenticated Request**: Automatically redirected to `/api/auth/guest`
-2. **Guest Creation**: System creates temporary guest user
+2. **Guest Creation**: System creates temporary guest user with email format `guest-{timestamp}`
 3. **Session Management**: NextAuth.js manages authentication state
-4. **User Upgrade**: Guests can register for permanent accounts
+4. **Limitations**: Limited daily messages, temporary account
+
+### 2. **Credentials Authentication** (Registered Users)
+
+1. **Registration**: User creates account with email/password via `/register`
+2. **Login**: User signs in with credentials via `/login` or `/api/auth/signin/credentials`
+3. **Full Access**: Higher daily message limits, persistent account
+4. **User Upgrade**: Guest users can register for permanent accounts
+
+**Note**: Both authentication methods use NextAuth.js internally but are not external OAuth providers.
 
 ## Supported Chat Models
 
