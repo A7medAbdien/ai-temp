@@ -8,6 +8,12 @@ import type { InferUITool, UIMessage } from 'ai';
 import type { ArtifactKind } from '@/components/artifact';
 import type { Suggestion } from './db/schema';
 
+import type { auth } from './auth';
+
+export type UserType = 'guest' | 'regular';
+export type Session = typeof auth.$Infer.Session;
+export type User = typeof auth.$Infer.Session.user;
+
 export type DataPart = { type: 'append-message'; message: string };
 
 export const messageMetadataSchema = z.object({

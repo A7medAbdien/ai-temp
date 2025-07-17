@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@/lib/auth';
 import { Chat } from '@/components/chat';
 import { getChatById, getMessagesByChatId } from '@/lib/db/queries';
 import { DataStreamHandler } from '@/components/data-stream-handler';
@@ -17,9 +17,11 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
     notFound();
   }
 
-  const session = await auth();
+  const session = await auth.api.getSession({
+    headers: new Headers(),
+  });
 
-  if (!session) {
+  if (!session?.user) {
     redirect('/api/auth/guest');
   }
 
@@ -50,7 +52,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
           initialMessages={uiMessages}
           initialChatModel={DEFAULT_CHAT_MODEL}
           initialVisibilityType={chat.visibility}
-          isReadonly={session?.user?.id !== chat.userId}
+          isReadonly={session.user.id !== chat.userId}
           session={session}
           autoResume={true}
         />
@@ -66,7 +68,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         initialMessages={uiMessages}
         initialChatModel={chatModelFromCookie.value}
         initialVisibilityType={chat.visibility}
-        isReadonly={session?.user?.id !== chat.userId}
+        isReadonly={session.user.id !== chat.userId}
         session={session}
         autoResume={true}
       />

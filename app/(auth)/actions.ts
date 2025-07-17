@@ -1,10 +1,8 @@
 'use server';
 
 import { z } from 'zod';
-
-import { createUser, getUser } from '@/lib/db/queries';
-
-import { signIn } from './auth';
+import { authClient } from '@/lib/auth-client';
+import { getUser } from '@/lib/db/queries';
 
 const authFormSchema = z.object({
   email: z.string().email(),
@@ -25,11 +23,14 @@ export const login = async (
       password: formData.get('password'),
     });
 
-    await signIn('credentials', {
+    const { error } = await authClient.signIn.email({
       email: validatedData.email,
       password: validatedData.password,
-      redirect: false,
     });
+
+    if (error) {
+      return { status: 'failed' };
+    }
 
     return { status: 'success' };
   } catch (error) {
@@ -61,17 +62,22 @@ export const register = async (
       password: formData.get('password'),
     });
 
+    // Check if user already exists
     const [user] = await getUser(validatedData.email);
 
     if (user) {
       return { status: 'user_exists' } as RegisterActionState;
     }
-    await createUser(validatedData.email, validatedData.password);
-    await signIn('credentials', {
+
+    const { error } = await authClient.signUp.email({
       email: validatedData.email,
       password: validatedData.password,
-      redirect: false,
+      name: validatedData.email.split('@')[0], // Use email prefix as name
     });
+
+    if (error) {
+      return { status: 'failed' };
+    }
 
     return { status: 'success' };
   } catch (error) {

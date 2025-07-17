@@ -1,6 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import { guestRegex, isDevelopmentEnvironment } from './lib/constants';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -13,30 +11,37 @@ export async function middleware(request: NextRequest) {
     return new Response('pong', { status: 200 });
   }
 
-  if (pathname.startsWith('/api/auth')) {
+  // Let all API routes pass through without authentication
+  if (pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
-
-  if (!token) {
-    const redirectUrl = encodeURIComponent(request.url);
-
-    return NextResponse.redirect(
-      new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url),
-    );
+  // Let auth pages through without authentication (to avoid redirect loops)
+  if (['/login', '/register'].includes(pathname)) {
+    return NextResponse.next();
   }
 
-  const isGuest = guestRegex.test(token?.email ?? '');
+  // Check for Better Auth session cookie
+  const sessionToken = request.cookies.get('better-auth.session_token');
 
-  if (token && !isGuest && ['/login', '/register'].includes(pathname)) {
-    return NextResponse.redirect(new URL('/', request.url));
+  if (!sessionToken) {
+    // No session cookie found, redirect to guest auth only for protected routes
+    if (pathname === '/' || pathname.startsWith('/chat')) {
+      // Add a check to prevent redirect loops
+      const referer = request.headers.get('referer');
+      if (referer?.includes('/api/auth/guest')) {
+        return NextResponse.next(); // Let it through to avoid infinite loop
+      }
+
+      const redirectUrl = encodeURIComponent(request.url);
+
+      return NextResponse.redirect(
+        new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url),
+      );
+    }
   }
 
+  // If we have a session token or it's not a protected route, let it through
   return NextResponse.next();
 }
 

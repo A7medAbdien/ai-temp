@@ -1,17 +1,25 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 
 import { Chat } from '@/components/chat';
 import { DEFAULT_CHAT_MODEL } from '@/lib/ai/models';
 import { generateUUID } from '@/lib/utils';
 import { DataStreamHandler } from '@/components/data-stream-handler';
-import { auth } from '../(auth)/auth';
+import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 
 export default async function Page() {
-  const session = await auth();
+  const requestHeaders = await headers();
+  const session = await auth.api.getSession({
+    headers: requestHeaders,
+  });
 
-  if (!session) {
-    redirect('/api/auth/guest');
+  if (!session?.user) {
+    // Get the current URL for redirect after guest auth
+    const host = requestHeaders.get('host') || 'localhost:3001';
+    const protocol = requestHeaders.get('x-forwarded-proto') || 'http';
+    const currentUrl = `${protocol}://${host}/`;
+    const redirectUrl = encodeURIComponent(currentUrl);
+    redirect(`/api/auth/guest?redirectUrl=${redirectUrl}`);
   }
 
   const id = generateUUID();

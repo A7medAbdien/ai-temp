@@ -2,8 +2,6 @@
 
 import { ChevronUp } from 'lucide-react';
 import Image from 'next/image';
-import type { User } from 'next-auth';
-import { signOut, useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 
 import {
@@ -22,49 +20,70 @@ import { useRouter } from 'next/navigation';
 import { toast } from './toast';
 import { LoaderIcon } from './icons';
 import { guestRegex } from '@/lib/constants';
+import { useSessionWithType, signOut } from '@/lib/auth-client';
+import type { AuthSession } from '@/lib/auth';
 
-export function SidebarUserNav({ user }: { user: User }) {
+export function SidebarUserNav({
+  user,
+}: { user: AuthSession['user'] | undefined }) {
   const router = useRouter();
-  const { data, status } = useSession();
+  const { data, isPending } = useSessionWithType();
   const { setTheme, resolvedTheme } = useTheme();
 
   const isGuest = guestRegex.test(data?.user?.email ?? '');
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            {status === 'loading' ? (
-              <SidebarMenuButton className="data-[state=open]:bg-sidebar-accent bg-background data-[state=open]:text-sidebar-accent-foreground h-10 justify-between">
-                <div className="flex flex-row gap-2">
-                  <div className="size-6 bg-zinc-500/30 rounded-full animate-pulse" />
-                  <span className="bg-zinc-500/30 text-transparent rounded-md animate-pulse">
-                    Loading auth status
-                  </span>
+            <SidebarMenuButton
+              size="lg"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              data-testid="user-nav-button"
+            >
+              <div className="flex items-center gap-2 text-left text-sm">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs">
+                  {user?.image ? (
+                    <Image
+                      src={user.image}
+                      alt={user.email ?? ''}
+                      width={24}
+                      height={24}
+                      className="rounded-full"
+                    />
+                  ) : (
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs">
+                      {user?.email
+                        ? user.email
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')
+                            .slice(0, 2)
+                            .toUpperCase()
+                        : null}
+                    </div>
+                  )}
                 </div>
-                <div className="animate-spin text-zinc-500">
-                  <LoaderIcon />
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  {isPending ? (
+                    <LoaderIcon size={16} />
+                  ) : (
+                    <span
+                      className="truncate font-semibold"
+                      data-testid="user-email"
+                    >
+                      {isGuest ? 'Guest' : user?.email}
+                    </span>
+                  )}
                 </div>
-              </SidebarMenuButton>
-            ) : (
-              <SidebarMenuButton
-                data-testid="user-nav-button"
-                className="data-[state=open]:bg-sidebar-accent bg-background data-[state=open]:text-sidebar-accent-foreground h-10"
-              >
-                <Image
-                  src={`https://avatar.vercel.sh/${user.email}`}
-                  alt={user.email ?? 'User Avatar'}
-                  width={24}
-                  height={24}
-                  className="rounded-full"
-                />
-                <span data-testid="user-email" className="truncate">
-                  {isGuest ? 'Guest' : user?.email}
-                </span>
-                <ChevronUp className="ml-auto" />
-              </SidebarMenuButton>
-            )}
+              </div>
+              <ChevronUp className="ml-auto size-4" />
+            </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             data-testid="user-nav-menu"
@@ -74,7 +93,9 @@ export function SidebarUserNav({ user }: { user: User }) {
             <DropdownMenuItem
               data-testid="user-nav-item-theme"
               className="cursor-pointer"
-              onSelect={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+              onSelect={() =>
+                setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
+              }
             >
               {`Toggle ${resolvedTheme === 'light' ? 'dark' : 'light'} mode`}
             </DropdownMenuItem>
@@ -83,8 +104,8 @@ export function SidebarUserNav({ user }: { user: User }) {
               <button
                 type="button"
                 className="w-full cursor-pointer"
-                onClick={() => {
-                  if (status === 'loading') {
+                onClick={async () => {
+                  if (isPending) {
                     toast({
                       type: 'error',
                       description:
@@ -97,9 +118,8 @@ export function SidebarUserNav({ user }: { user: User }) {
                   if (isGuest) {
                     router.push('/login');
                   } else {
-                    signOut({
-                      redirectTo: '/',
-                    });
+                    await signOut();
+                    router.push('/');
                   }
                 }}
               >

@@ -1,18 +1,17 @@
-import { Toaster } from 'sonner';
-import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { ThemeProvider } from '@/components/theme-provider';
+import { Toaster } from 'sonner';
+import type { Metadata, Viewport } from 'next';
 
 import './globals.css';
-import { SessionProvider } from 'next-auth/react';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://chat.vercel.ai'),
-  title: 'Next.js Chatbot Template',
-  description: 'Next.js chatbot template using the AI SDK.',
+  metadataBase: new URL('https://ilha.ai'),
+  title: 'Ilha',
+  description: 'Ilha',
 };
 
-export const viewport = {
+export const viewport: Viewport = {
   maximumScale: 1, // Disable auto-zoom on mobile Safari
 };
 
@@ -78,7 +77,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <Toaster position="top-center" />
-          <SessionProvider>{children}</SessionProvider>
+          {children}
         </ThemeProvider>
       </body>
     </html>

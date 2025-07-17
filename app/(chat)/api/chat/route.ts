@@ -6,7 +6,8 @@ import {
   stepCountIs,
   streamText,
 } from 'ai';
-import { auth, type UserType } from '@/app/(auth)/auth';
+import { auth } from '@/lib/auth';
+import type { UserType } from '@/lib/types';
 import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
 import {
   createStreamId,
@@ -85,13 +86,15 @@ export async function POST(request: Request) {
       selectedVisibilityType: VisibilityType;
     } = requestBody;
 
-    const session = await auth();
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
 
     if (!session?.user) {
       return new ChatSDKError('unauthorized:chat').toResponse();
     }
 
-    const userType: UserType = session.user.type;
+    const userType: UserType = session.user.type as UserType;
 
     const messageCount = await getMessageCountByUserId({
       id: session.user.id,
@@ -233,7 +236,9 @@ export async function DELETE(request: Request) {
     return new ChatSDKError('bad_request:api').toResponse();
   }
 
-  const session = await auth();
+  const session = await auth.api.getSession({
+    headers: request.headers,
+  });
 
   if (!session?.user) {
     return new ChatSDKError('unauthorized:chat').toResponse();
