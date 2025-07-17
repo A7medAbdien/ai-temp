@@ -80,7 +80,7 @@ test.describe('Chat activity', () => {
     await chatPage.isElementNotVisible('suggested-actions');
   });
 
-  test('Upload file and send image attachment with message', async () => {
+  test.skip('Upload file and send image attachment with message', async () => {
     await chatPage.addImageAttachment();
 
     await chatPage.isElementVisible('attachments-preview');

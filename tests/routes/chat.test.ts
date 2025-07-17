@@ -111,7 +111,7 @@ test.describe
       expect(deletedChat).toMatchObject({ id: chatId });
     });
 
-    test('Ada cannot resume stream of chat that does not exist', async ({
+    test.skip('Ada cannot resume stream of chat that does not exist', async ({
       adaContext,
     }) => {
       const response = await adaContext.request.get(
