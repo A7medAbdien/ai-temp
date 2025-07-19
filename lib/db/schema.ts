@@ -23,6 +23,8 @@ export const user = pgTable('User', {
   updatedAt: timestamp('updated_at').defaultNow(),
   // Use enum to match UserType definition in auth.ts
   type: varchar('type', { enum: ['guest', 'regular'] }).default('regular'),
+  // Required for Better Auth anonymous plugin
+  isAnonymous: boolean('is_anonymous').default(false),
 });
 
 export type User = InferSelectModel<typeof user>;

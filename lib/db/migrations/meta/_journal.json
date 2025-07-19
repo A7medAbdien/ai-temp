@@ -57,6 +57,13 @@
       "when": 1752762133342,
       "tag": "0007_condemned_wrecking_crew",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1752909664604,
+      "tag": "0008_aromatic_mimic",
+      "breakpoints": true
     }
   ]
 }
